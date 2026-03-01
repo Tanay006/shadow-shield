@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Shadow Shield - Protection Report</title>
+  <link rel="stylesheet" href="report.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <div class="report-container">
+    <header>
+      <div class="report-header-left">
+        <img src="../assets/icons/icon128.png" alt="Shadow Shield" class="report-logo">
+        <h1>Protection Report</h1>
+      </div>
+      <button id="print-btn" class="print-btn" style="display:none;"></button>
+    </header>
+
+    <!-- Error Fallback Banner (hidden by default) -->
+    <div id="error-banner" class="error-banner" style="display: none;">
+      <span class="error-icon">⚠️</span>
+      <div class="error-content">
+        <strong>Something went wrong</strong>
+        <p id="error-message">Unable to load report data. Please try reloading the extension.</p>
+      </div>
+      <button id="error-retry-btn" class="retry-btn">Retry</button>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading report data...</p>
+    </div>
+
+    <!-- Main Content (hidden until loaded) -->
+    <div id="report-content" style="display: none;">
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <h3>Total Sessions</h3>
+          <div class="kpi-value" id="total-sessions">0</div>
+        </div>
+        <div class="kpi-card">
+          <h3>Files Protected</h3>
+          <div class="kpi-value" id="total-files">0</div>
+        </div>
+        <div class="kpi-card">
+          <h3>Threats Blocked</h3>
+          <div class="kpi-value" id="threats-blocked">0</div>
+        </div>
+      </div>
+
+      <div class="charts-section">
+        <div class="chart-card">
+          <h3>Risk Distribution</h3>
+          <div class="bar-chart" id="risk-chart">
+            <!-- Bars injected via JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline-section">
+        <h3>Recent Activity</h3>
+        <div id="empty-state" class="empty-state" style="display: none;">
+          <p>No files have been scanned yet. Start using Shadow Shield to see activity here.</p>
+        </div>
+        <table class="activity-table" id="activity-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>File Name</th>
+              <th>Size</th>
+              <th>Risk Level</th>
+            </tr>
+          </thead>
+          <tbody id="activity-tbody">
+            <!-- Rows injected via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <script src="report.js"></script>
+</body>
+
+</html>

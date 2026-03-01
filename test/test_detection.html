@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DataShield AI — Detection &amp; Replacement Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 24px; }
+    h1 { text-align: center; color: #60a5fa; margin-bottom: 8px; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
+    .container { max-width: 900px; margin: 0 auto; }
+    .section { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #334155; }
+    .section h2 { color: #38bdf8; margin-bottom: 12px; font-size: 16px; }
+    textarea { width: 100%; min-height: 100px; background: #0f172a; border: 1px solid #475569; border-radius: 8px; padding: 12px; color: #e2e8f0; font-family: 'SF Mono', monospace; font-size: 13px; resize: vertical; }
+    button { padding: 10px 20px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; font-size: 13px; transition: all 0.15s; }
+    .btn-primary { background: #3b82f6; color: white; margin-right: 8px; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-secondary { background: #475569; color: white; margin-right: 8px; }
+    .btn-secondary:hover { background: #64748b; }
+    .btn-success { background: #10b981; color: white; }
+    .btn-success:hover { background: #059669; }
+    .controls { margin: 12px 0; display: flex; gap: 8px; flex-wrap: wrap; }
+    .results { margin-top: 16px; }
+    .result-card { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+    .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .result-type { font-weight: 700; color: #60a5fa; }
+    .badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+    .badge-high { background: #fee2e2; color: #991b1b; }
+    .badge-medium { background: #ffedd5; color: #9a3412; }
+    .badge-low { background: #dbeafe; color: #1e40af; }
+    .result-row { display: grid; grid-template-columns: 100px 1fr; gap: 4px; font-size: 13px; margin: 4px 0; }
+    .result-label { color: #94a3b8; }
+    .result-value { color: #f1f5f9; font-family: 'SF Mono', monospace; font-size: 12px; }
+    .result-replacement { color: #34d399; font-family: 'SF Mono', monospace; font-size: 12px; }
+    .test-status { padding: 8px 12px; border-radius: 6px; font-size: 13px; margin-bottom: 8px; }
+    .pass { background: #064e3b; border: 1px solid #10b981; color: #6ee7b7; }
+    .fail { background: #7f1d1d; border: 1px solid #ef4444; color: #fca5a5; }
+    .info { background: #1e3a5f; border: 1px solid #3b82f6; color: #93c5fd; }
+    .overall-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #0f172a; border-radius: 8px; margin-top: 12px; border: 1px solid #334155; }
+    .confidence-bar { height: 6px; background: #334155; border-radius: 3px; flex: 1; margin: 0 16px; overflow: hidden; }
+    .confidence-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+    .replaced-text { background: #064e3b; border: 1px solid #10b981; border-radius: 8px; padding: 12px; font-family: 'SF Mono', monospace; font-size: 13px; color: #6ee7b7; white-space: pre-wrap; margin-top: 12px; }
+    .test-suite { margin-top: 16px; }
+    .test-case { display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #334155; font-size: 13px; }
+    .test-case:last-child { border-bottom: none; }
+    .test-name { color: #e2e8f0; }
+    .test-result { font-weight: 700; }
+    .test-result.pass { background: transparent; border: none; color: #10b981; }
+    .test-result.fail { background: transparent; border: none; color: #ef4444; }
+    #modal-test-area { min-height: 200px; position: relative; }
+  </style>
+  <!-- Load extension scripts in order -->
+  <link rel="stylesheet" href="../styles/global.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🛡️ DataShield AI — Test Suite</h1>
+    <p class="subtitle">Interactive test page for detection, replacement, and modal flow</p>
+
+    <!-- ── Automated Unit Tests ── -->
+    <div class="section">
+      <h2>🧪 Automated Tests</h2>
+      <button class="btn-primary" onclick="runAllTests()">▶ Run All Tests</button>
+      <div id="test-results" class="test-suite"></div>
+    </div>
+
+    <!-- ── Interactive Scanner ── -->
+    <div class="section">
+      <h2>🔍 Interactive PII Scanner</h2>
+      <textarea id="scan-input" placeholder="Paste or type text with sensitive data here...">My SSN is 123-45-6789. Email: john.doe@gmail.com
+Phone: +1 (555) 123-4567. Credit card: 4532015112830366
+Name: Rahul Kumar. DOB: 15/03/1990
+Aadhaar: 1234 5678 9012. PAN: ABCDE1234F
+API key: sk_test_a1b2c3d4e5f6g7h8i9j0k1l2m3
+Address: 42 MG Road, Bangalore, Karnataka 560001
+Passport No: J8765432</textarea>
+      <div class="controls">
+        <button class="btn-primary" onclick="runScan()">🔍 Scan Text</button>
+        <button class="btn-secondary" onclick="runReplace()">🔄 Replace Selected</button>
+        <button class="btn-success" onclick="showModal()">💬 Show Approval Modal</button>
+      </div>
+      <div id="scan-results" class="results"></div>
+      <div id="replaced-output"></div>
+    </div>
+
+    <!-- ── Modal Test Area ── -->
+    <div class="section" id="modal-test-area">
+      <h2>📋 Modal Test Area</h2>
+      <p style="color:#94a3b8; font-size:13px;">Click "Show Approval Modal" above to test the modal here. The modal overlay will appear on top of this page.</p>
+    </div>
+  </div>
+
+  <!-- Load all scripts in correct order -->
+  <script src="../utils/helpers.js"></script>
+  <script src="../utils/trainingData.js"></script>
+  <script src="../utils/fakeDataGenerator.js"></script>
+  <script src="../utils/dataSanitizer.js"></script>
+  <script src="../utils/notificationManager.js"></script>
+  <script src="../utils/approvalModal.js"></script>
+
+  <script>
+    // ── GLOBALS ──
+    let lastScanResult = null;
+
+    // ── SCAN ──
+    function runScan() {
+      const text = document.getElementById('scan-input').value;
+      const result = window.DataSanitizer.scanWithPositions(text);
+      lastScanResult = result;
+      displayResults(result);
+    }
+
+    function displayResults(result) {
+      const container = document.getElementById('scan-results');
+      if (result.findings.length === 0) {
+        container.innerHTML = '<div class="test-status pass">✅ No sensitive data detected. Text is safe.</div>';
+        return;
+      }
+
+      let html = '<div class="overall-bar">';
+      html += '<span>Overall Risk: <strong>' + result.overallRisk + '</strong></span>';
+      html += '<div class="confidence-bar"><div class="confidence-fill" style="width:'
+        + result.confidence + '%; background:' + (result.confidence > 60 ? '#ef4444' : result.confidence > 30 ? '#f59e0b' : '#3b82f6')
+        + '"></div></div>';
+      html += '<span>Confidence: <strong>' + result.confidence + '%</strong></span>';
+      html += '</div>';
+
+      for (const f of result.findings) {
+        const badgeClass = 'badge-' + f.risk.toLowerCase();
+        html += '<div class="result-card">';
+        html += '<div class="result-header">';
+        html += '<span class="result-type">' + f.label + '</span>';
+        html += '<span class="badge ' + badgeClass + '">' + f.risk + '</span>';
+        html += '</div>';
+        html += '<div class="result-row"><span class="result-label">Detected:</span><span class="result-value">' + escapeHtml(f.masked) + '</span></div>';
+        html += '<div class="result-row"><span class="result-label">Original:</span><span class="result-value">' + escapeHtml(f.value) + '</span></div>';
+        html += '<div class="result-row"><span class="result-label">Replace →</span><span class="result-replacement">' + escapeHtml(f.replacement) + '</span></div>';
+        html += '<div class="result-row"><span class="result-label">Confidence:</span><span class="result-value">' + f.confidence + '%</span></div>';
+        if (f.contextDetected) {
+          html += '<div class="result-row"><span class="result-label">Source:</span><span class="result-value" style="color:#a78bfa">Context Pattern</span></div>';
+        }
+        html += '</div>';
+      }
+
+      container.innerHTML = html;
+    }
+
+    // ── REPLACE ──
+    function runReplace() {
+      if (!lastScanResult || lastScanResult.findings.length === 0) {
+        alert('Run a scan first!');
+        return;
+      }
+      const text = document.getElementById('scan-input').value;
+      const replaced = window.DataSanitizer.applyReplacements(text, lastScanResult.findings);
+      document.getElementById('replaced-output').innerHTML =
+        '<div class="replaced-text"><strong>Replaced Text:</strong>\n\n' + escapeHtml(replaced) + '</div>';
+    }
+
+    // ── MODAL ──
+    async function showModal() {
+      if (!lastScanResult || lastScanResult.findings.length === 0) {
+        // Run scan first
+        runScan();
+        if (!lastScanResult || lastScanResult.findings.length === 0) {
+          alert('No PII detected to show in modal.');
+          return;
+        }
+      }
+
+      const decision = await window.ApprovalModal.showForText(
+        lastScanResult.findings,
+        lastScanResult.overallRisk,
+        document.getElementById('scan-input').value
+      );
+
+      if (decision.action === 'replace') {
+        const text = document.getElementById('scan-input').value;
+        const replaced = window.DataSanitizer.applyReplacements(text, decision.findings);
+        document.getElementById('scan-input').value = replaced;
+        document.getElementById('replaced-output').innerHTML =
+          '<div class="test-status pass">✅ ' + decision.findings.filter(f => f.selected).length + ' items replaced!</div>';
+      } else if (decision.action === 'send-as-is') {
+        document.getElementById('replaced-output').innerHTML =
+          '<div class="test-status info">ℹ️ User chose to send as-is (no replacements).</div>';
+      } else {
+        document.getElementById('replaced-output').innerHTML =
+          '<div class="test-status info">ℹ️ User cancelled.</div>';
+      }
+    }
+
+    // ── AUTOMATED TESTS ──
+    function runAllTests() {
+      const results = [];
+
+      // Test 1: SSN detection
+      results.push(testDetection('SSN Detection', 'My SSN is 123-45-6789', 'ssn'));
+
+      // Test 2: Credit card detection (Luhn valid)
+      results.push(testDetection('Credit Card Detection (Luhn)', 'Card: 4532015112830366', 'creditCard'));
+
+      // Test 3: Email detection
+      results.push(testDetection('Email Detection', 'Contact me at test@gmail.com', 'email'));
+
+      // Test 4: Phone detection
+      results.push(testDetection('Phone Detection', 'Call +1 (555) 123-4567', 'phone'));
+
+      // Test 5: Aadhaar detection
+      results.push(testDetection('Aadhaar Detection', 'Aadhaar: 1234 5678 9012', 'aadhaar'));
+
+      // Test 6: PAN detection
+      results.push(testDetection('PAN Detection', 'PAN: ABCDE1234F', 'pan'));
+
+      // Test 7: API Key detection
+      results.push(testDetection('API Key Detection', 'Key: sk_test_a1b2c3d4e5f6g7h8i9j0k1l2m3', 'apiKey'));
+
+      // Test 8: IP Address detection
+      results.push(testDetection('IP Address Detection', 'Server at 192.168.1.100', 'ipv4'));
+
+      // Test 9: Context pattern — Labelled Name
+      results.push(testDetection('Context: Labelled Name', 'Full Name: Rahul Kumar', 'name'));
+
+      // Test 10: Context pattern — DOB
+      results.push(testDetection('Context: Date of Birth', 'Date of Birth: 15/03/1990', 'dob'));
+
+      // Test 11: Context pattern — Address
+      results.push(testDetection('Context: Address', 'Address: 42 MG Road, Bangalore, Karnataka 560001, India', 'address'));
+
+      // Test 12: Context pattern — Passport
+      results.push(testDetection('Context: Passport', 'Passport No: J8765432', 'passport'));
+
+      // Test 13: Context pattern — Bank Account
+      results.push(testDetection('Context: Bank Account', 'Account Number: 123456789012', 'bankAccount'));
+
+      // Test 14: Fake data generators
+      results.push(testFakeData('FakeData: SSN', 'ssn', '123-45-6789'));
+      results.push(testFakeData('FakeData: Email', 'email', 'test@gmail.com'));
+      results.push(testFakeData('FakeData: Name', 'name', 'Rahul Kumar'));
+      results.push(testFakeData('FakeData: DOB', 'dob', '15/03/1990'));
+      results.push(testFakeData('FakeData: Address', 'address', '42 MG Road, Bangalore, Karnataka'));
+      results.push(testFakeData('FakeData: Passport', 'passport', 'J8765432'));
+      results.push(testFakeData('FakeData: BankAccount', 'bankAccount', '123456789012'));
+
+      // Test 15: Replacement works
+      results.push(testReplacement());
+
+      // Test 16: Confidence scoring
+      results.push(testConfidence());
+
+      // Test 17: ApprovalModal exists
+      results.push({
+        name: 'ApprovalModal Available',
+        pass: typeof window.ApprovalModal === 'object' && typeof window.ApprovalModal.showForText === 'function',
+        detail: typeof window.ApprovalModal === 'object' ? 'showForText is ' + typeof window.ApprovalModal.showForText : 'Not loaded'
+      });
+
+      // Display results
+      displayTestResults(results);
+    }
+
+    function testDetection(name, text, expectedType) {
+      try {
+        const result = window.DataSanitizer.scanWithPositions(text);
+        const found = result.findings.some(f => f.type === expectedType);
+        return {
+          name,
+          pass: found,
+          detail: found
+            ? 'Detected: ' + result.findings.filter(f => f.type === expectedType).map(f => '"' + f.value + '"').join(', ')
+            : 'Not detected. Found types: ' + (result.findings.map(f => f.type).join(', ') || 'none')
+        };
+      } catch (e) {
+        return { name, pass: false, detail: 'Error: ' + e.message };
+      }
+    }
+
+    function testFakeData(name, type, original) {
+      try {
+        const fake = window.FakeDataGenerator.generate(type, original);
+        const pass = fake && fake !== original && fake !== '[REDACTED]';
+        return { name, pass, detail: original + ' → ' + fake };
+      } catch (e) {
+        return { name, pass: false, detail: 'Error: ' + e.message };
+      }
+    }
+
+    function testReplacement() {
+      try {
+        const text = 'My SSN is 123-45-6789 and email is test@gmail.com';
+        const result = window.DataSanitizer.scanWithPositions(text);
+        const replaced = window.DataSanitizer.applyReplacements(text, result.findings);
+        const pass = replaced !== text && !replaced.includes('123-45-6789') && !replaced.includes('test@gmail.com');
+        return { name: 'Text Replacement', pass, detail: 'Original length: ' + text.length + ', Replaced length: ' + replaced.length };
+      } catch (e) {
+        return { name: 'Text Replacement', pass: false, detail: 'Error: ' + e.message };
+      }
+    }
+
+    function testConfidence() {
+      try {
+        const text = 'Social Security Number: 123-45-6789. This is my SSN for the passport application.';
+        const result = window.DataSanitizer.scanWithPositions(text);
+        const ssnFinding = result.findings.find(f => f.type === 'ssn');
+        const pass = ssnFinding && ssnFinding.confidence > 50;
+        return {
+          name: 'Confidence Scoring',
+          pass,
+          detail: ssnFinding ? 'SSN confidence: ' + ssnFinding.confidence + '% (keyword-boosted)' : 'SSN not found'
+        };
+      } catch (e) {
+        return { name: 'Confidence Scoring', pass: false, detail: 'Error: ' + e.message };
+      }
+    }
+
+    function displayTestResults(results) {
+      const container = document.getElementById('test-results');
+      const passed = results.filter(r => r.pass).length;
+      const total = results.length;
+
+      let html = '<div class="test-status ' + (passed === total ? 'pass' : 'fail') + '">'
+        + (passed === total ? '✅' : '⚠️') + ' ' + passed + '/' + total + ' tests passed</div>';
+
+      for (const r of results) {
+        html += '<div class="test-case">';
+        html += '<span class="test-name">' + r.name + '</span>';
+        html += '<span class="test-result ' + (r.pass ? 'pass' : 'fail') + '">'
+          + (r.pass ? '✅ PASS' : '❌ FAIL') + '</span>';
+        html += '</div>';
+        if (!r.pass && r.detail) {
+          html += '<div style="padding: 4px 12px 8px; font-size: 12px; color: #94a3b8;">' + escapeHtml(r.detail) + '</div>';
+        }
+      }
+
+      container.innerHTML = html;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
