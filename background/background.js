@@ -18,6 +18,9 @@ chrome.runtime.onInstalled.addListener((details) => {
         autoOffMinutes: 5,
         scanEnabled: true
       }
+    }, () => {
+      // Check if any AI tabs are open right after install
+      checkActiveSessions();
     });
     console.log('Shadow Shield: First install — defaults initialized.');
   } else {
@@ -36,7 +39,15 @@ chrome.runtime.onInstalled.addListener((details) => {
       }
     });
     console.log('Shadow Shield: Extension updated/reloaded — existing data preserved.');
+    // Check sessions on reload/update too
+    checkActiveSessions();
   }
+});
+
+// Check for active AI sessions on Chrome startup
+chrome.runtime.onStartup.addListener(() => {
+  console.log('Shadow Shield: Chrome started — checking for active AI sessions.');
+  checkActiveSessions();
 });
 
 // AI Platforms to monitor
@@ -53,24 +64,36 @@ const AI_PLATFORMS = [
 // Monitor tab updates for platform detection
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url) {
-    const url = new URL(tab.url);
-    const isAIPlatform = AI_PLATFORMS.some(domain => url.hostname.includes(domain));
+    try {
+      const url = new URL(tab.url);
+      const isAIPlatform = AI_PLATFORMS.some(domain => url.hostname.includes(domain));
 
-    if (isAIPlatform) {
-      chrome.storage.local.get(['settings', 'secureMode'], (result) => {
-        if (result.settings?.autoDetect) {
-          // Could auto-enable or just notify, per requirements we detect and show in popup
-          // We also inject content scripts automatically via manifest, but we can send a message
-          chrome.tabs.sendMessage(tabId, {
-            action: 'platformDetected',
-            platform: url.hostname
-          }).catch(() => {
-            // Content script might not be ready yet
-          });
-          // Log platform detection
-          addNotificationToHistory('Platform Detected', `Shadow Shield is now active on ${url.hostname}`, 'info', url.hostname);
-        }
-      });
+      if (isAIPlatform) {
+        chrome.storage.local.get(['settings', 'secureMode'], (result) => {
+          if (result.settings?.autoDetect) {
+            // Send message to content script
+            chrome.tabs.sendMessage(tabId, {
+              action: 'platformDetected',
+              platform: url.hostname
+            }).catch(() => {
+              // Content script might not be ready yet
+            });
+            // Log platform detection
+            addNotificationToHistory('Platform Detected', `Shadow Shield is now active on ${url.hostname}`, 'info', url.hostname);
+          }
+
+          // AI tab found — cancel any running auto-off timer
+          if (result.secureMode) {
+            cancelAutoOffTimer();
+            console.log('Shadow Shield: AI platform detected — auto-off timer cancelled.');
+          }
+        });
+      } else {
+        // Non-AI page loaded — check if any AI tabs remain
+        checkActiveSessions();
+      }
+    } catch (e) {
+      // Invalid URL (e.g., chrome:// pages), ignore
     }
   }
 });
@@ -124,6 +147,8 @@ function triggerSecureModeWarning() {
           return;
         }
 
+        console.log(`Shadow Shield: No AI tabs detected — starting ${minutes}-minute auto-off timer.`);
+
         // Store when the timer started so popup can show countdown
         chrome.storage.local.set({ timerStartedAt: Date.now(), timerMinutes: minutes });
 
@@ -139,6 +164,18 @@ function triggerSecureModeWarning() {
       });
     });
   });
+}
+
+/**
+ * Cancel the auto-off timer — called when an AI tab is detected.
+ * Clears alarms, storage, notifications, and badge.
+ */
+function cancelAutoOffTimer() {
+  chrome.alarms.clear('autoOffWarning');
+  chrome.alarms.clear('autoOffGrace');
+  chrome.notifications.clear('secure-mode-expiry');
+  chrome.storage.local.remove(['timerStartedAt', 'timerMinutes']);
+  chrome.action.setBadgeText({ text: '' });
 }
 
 // Show the expiry warning notification + start the 1-min grace period
@@ -210,32 +247,35 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 function turnOffSecureMode(auto = false) {
-  // Clear all timer-related alarms and storage
-  chrome.alarms.clear('autoOffWarning');
-  chrome.alarms.clear('autoOffGrace');
-  chrome.storage.local.remove(['timerStartedAt', 'timerMinutes']);
+  // Read timer duration before clearing, so we can include it in the notification
+  chrome.storage.local.get(['timerMinutes'], (timerResult) => {
+    const timerDuration = timerResult.timerMinutes || '?';
 
-  chrome.storage.local.set({
-    secureMode: false,
-    protectedFiles: [] // Clear memory
-  }, () => {
-    chrome.action.setBadgeText({ text: '' });
+    // Clear all timer-related alarms and storage
+    cancelAutoOffTimer();
 
-    const message = auto
-      ? 'Secure Mode was automatically turned off. You did not respond to the expiry warning.'
-      : 'Secure Mode has been turned off.';
+    chrome.storage.local.set({
+      secureMode: false,
+      protectedFiles: [] // Clear memory
+    }, () => {
+      chrome.action.setBadgeText({ text: '' });
 
-    chrome.notifications.create({
-      type: 'basic',
-      iconUrl: 'assets/icons/icon128.png',
-      title: auto ? '⏰ Shadow Shield — Auto OFF' : 'Shadow Shield',
-      message: message
+      const message = auto
+        ? `Shadow Shield was automatically turned off because no AI platform was detected for ${timerDuration} minute(s). Open an AI site and re-enable Secure Mode to resume protection.`
+        : 'Secure Mode has been turned off.';
+
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'assets/icons/icon128.png',
+        title: auto ? '⏰ Shadow Shield — Auto OFF (Timer Expired)' : 'Shadow Shield',
+        message: message
+      });
+      addNotificationToHistory(
+        auto ? 'Secure Mode Auto-OFF (Timer)' : 'Secure Mode OFF',
+        message,
+        auto ? 'warning' : 'info'
+      );
     });
-    addNotificationToHistory(
-      auto ? 'Secure Mode Auto-OFF' : 'Secure Mode OFF',
-      message,
-      auto ? 'warning' : 'info'
-    );
   });
 }
 
