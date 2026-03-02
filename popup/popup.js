@@ -57,6 +57,18 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (hostname.includes('perplexity')) {
         detected = 'Perplexity';
         icon = '🔎';
+      } else if (hostname.includes('deepseek')) {
+        detected = 'DeepSeek';
+        icon = '🐋';
+      } else if (hostname.includes('grok')) {
+        detected = 'Grok';
+        icon = '⚡';
+      } else if (hostname.includes('huggingface')) {
+        detected = 'HuggingChat';
+        icon = '🤗';
+      } else if (hostname.includes('mistral')) {
+        detected = 'Mistral AI';
+        icon = '🌀';
       }
 
       platformName.textContent = detected;
@@ -183,7 +195,11 @@ document.addEventListener('DOMContentLoaded', () => {
     else riskLevelDisplay.style.color = 'var(--success)';
   }
 
+  // Use shared helper from utils/helpers.js
   function formatBytes(bytes, decimals = 2) {
+    if (window.DSHelpers && window.DSHelpers.formatBytes) {
+      return window.DSHelpers.formatBytes(bytes, decimals);
+    }
     if (!+bytes) return '0 Bytes';
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;

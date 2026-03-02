@@ -27,17 +27,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 const time = new Date(notif.timestamp).toLocaleString();
                 const icon = getIcon(notif.type);
 
-                item.innerHTML = `
-                    <div class="notif-icon">${icon}</div>
-                    <div class="notif-content">
-                        <div class="notif-header">
-                            <span class="notif-title">${notif.title}</span>
-                            <span class="notif-time">${time}</span>
-                        </div>
-                        <div class="notif-message">${notif.message}</div>
-                        ${notif.platform ? `<div class="notif-platform">📍 ${notif.platform}</div>` : ''}
-                    </div>
-                `;
+                // Safe DOM creation (no innerHTML) to prevent XSS
+                const iconDiv = document.createElement('div');
+                iconDiv.className = 'notif-icon';
+                iconDiv.textContent = icon;
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'notif-content';
+
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'notif-header';
+
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'notif-title';
+                titleSpan.textContent = notif.title;
+
+                const timeSpan = document.createElement('span');
+                timeSpan.className = 'notif-time';
+                timeSpan.textContent = time;
+
+                headerDiv.appendChild(titleSpan);
+                headerDiv.appendChild(timeSpan);
+
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'notif-message';
+                messageDiv.textContent = notif.message;
+
+                contentDiv.appendChild(headerDiv);
+                contentDiv.appendChild(messageDiv);
+
+                if (notif.platform) {
+                    const platformDiv = document.createElement('div');
+                    platformDiv.className = 'notif-platform';
+                    platformDiv.textContent = '📍 ' + notif.platform;
+                    contentDiv.appendChild(platformDiv);
+                }
+
+                item.appendChild(iconDiv);
+                item.appendChild(contentDiv);
                 notificationList.appendChild(item);
             });
         });

@@ -54,10 +54,14 @@ function init() {
     if (changes.secureMode) {
       dsSecureMode = changes.secureMode.newValue;
       console.log('Shadow Shield: secureMode changed to', dsSecureMode);
+      updateFloatingIndicator();
     }
     if (changes.settings) {
       const s = changes.settings.newValue || {};
       dsScanEnabled = s.scanEnabled !== false;
+    }
+    if (changes.protectedFiles) {
+      updateFloatingIndicator();
     }
   });
 }
@@ -97,6 +101,41 @@ function injectFloatingIndicator() {
     indicator.appendChild(countSpan);
 
     document.body.appendChild(indicator);
+  });
+}
+
+/**
+ * Update the floating indicator live when secureMode or protectedFiles change.
+ */
+function updateFloatingIndicator() {
+  const indicator = document.getElementById('datashield-indicator');
+  if (!indicator) {
+    // Not injected yet — try injecting
+    injectFloatingIndicator();
+    return;
+  }
+
+  chrome.storage.local.get(['secureMode', 'protectedFiles'], (result) => {
+    const isSecure = result.secureMode || false;
+    const fileCount = result.protectedFiles ? result.protectedFiles.length : 0;
+
+    indicator.className = isSecure ? 'active' : '';
+
+    const dot = indicator.querySelector('.datashield-status-dot');
+    if (dot) {
+      dot.className = 'datashield-status-dot' + (isSecure ? ' active' : '');
+    }
+
+    const textSpan = indicator.querySelector('.datashield-status-text');
+    if (textSpan) {
+      textSpan.textContent = isSecure ? 'DataShield: ON' : 'DataShield: OFF';
+    }
+
+    const countSpan = indicator.querySelector('.datashield-file-count');
+    if (countSpan) {
+      countSpan.style.display = isSecure ? 'inline-block' : 'none';
+      countSpan.textContent = fileCount + ' files';
+    }
   });
 }
 

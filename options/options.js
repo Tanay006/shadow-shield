@@ -98,7 +98,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (confirm('Are you sure you want to clear all protection history and statistics? This cannot be undone.')) {
       chrome.storage.local.set({
         protectedFiles: [],
-        sessionStats: { totalFiles: 0, totalSessions: 0, riskDistribution: {} }
+        protectionHistory: [],
+        sessionStats: { totalFiles: 0, totalSessions: 0, riskDistribution: {} },
+        notificationHistory: []
       }, () => {
         alert('All data cleared successfully.');
       });

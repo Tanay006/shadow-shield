@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
   // ── UI References ──
-  const printBtn = document.getElementById('print-btn');
   const errorBanner = document.getElementById('error-banner');
   const errorMessage = document.getElementById('error-message');
   const retryBtn = document.getElementById('error-retry-btn');
@@ -8,15 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const reportContent = document.getElementById('report-content');
   const emptyState = document.getElementById('empty-state');
   const activityTable = document.getElementById('activity-table');
-
-  // ── Print Button ──
-  printBtn.addEventListener('click', () => {
-    try {
-      window.print();
-    } catch (e) {
-      showError('Unable to open print dialog. Please try again.');
-    }
-  });
 
   // ── Retry Button ──
   retryBtn.addEventListener('click', () => {
@@ -51,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      chrome.storage.local.get(['sessionStats', 'protectedFiles'], (result) => {
+      chrome.storage.local.get(['sessionStats', 'protectedFiles', 'protectionHistory'], (result) => {
         try {
           if (chrome.runtime.lastError) {
             showError('Failed to load data: ' + chrome.runtime.lastError.message);
@@ -59,7 +49,10 @@ document.addEventListener('DOMContentLoaded', () => {
           }
 
           const stats = result.sessionStats || { totalFiles: 0, totalSessions: 0 };
-          const files = result.protectedFiles || [];
+          // Combine current session files + persistent history
+          const currentFiles = result.protectedFiles || [];
+          const historyFiles = result.protectionHistory || [];
+          const files = [...currentFiles, ...historyFiles];
 
           // Update KPIs
           document.getElementById('total-sessions').textContent = stats.totalSessions || 0;
@@ -163,8 +156,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ── Format Bytes Helper ──
+  // ── Format Bytes Helper (use shared helper if available) ──
   function formatBytes(bytes, decimals = 2) {
+    if (window.DSHelpers && window.DSHelpers.formatBytes) {
+      return window.DSHelpers.formatBytes(bytes, decimals);
+    }
     if (!+bytes) return '0 Bytes';
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;

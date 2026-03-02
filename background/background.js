@@ -58,7 +58,11 @@ const AI_PLATFORMS = [
   'claude.ai',
   'copilot.microsoft.com',
   'poe.com',
-  'perplexity.ai'
+  'perplexity.ai',
+  'chat.deepseek.com',
+  'grok.x.ai',
+  'huggingface.co',
+  'chat.mistral.ai'
 ];
 
 // Monitor tab updates for platform detection
@@ -247,16 +251,25 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 function turnOffSecureMode(auto = false) {
-  // Read timer duration before clearing, so we can include it in the notification
-  chrome.storage.local.get(['timerMinutes'], (timerResult) => {
-    const timerDuration = timerResult.timerMinutes || '?';
+  // Read timer duration and current files before clearing
+  chrome.storage.local.get(['timerMinutes', 'protectedFiles', 'protectionHistory'], (result) => {
+    const timerDuration = result.timerMinutes || '?';
+    const currentFiles = result.protectedFiles || [];
+    const history = result.protectionHistory || [];
+
+    // Persist current session's files to history (capped at 500)
+    if (currentFiles.length > 0) {
+      history.unshift(...currentFiles);
+      if (history.length > 500) history.length = 500;
+    }
 
     // Clear all timer-related alarms and storage
     cancelAutoOffTimer();
 
     chrome.storage.local.set({
       secureMode: false,
-      protectedFiles: [] // Clear memory
+      protectedFiles: [], // Clear current session
+      protectionHistory: history // Persist historical data
     }, () => {
       chrome.action.setBadgeText({ text: '' });
 
