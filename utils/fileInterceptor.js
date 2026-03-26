@@ -40,20 +40,9 @@ const FileInterceptor = {
   },
 
   updateUI() {
-    const indicator = document.getElementById('datashield-indicator');
-    if (indicator) {
-      const statusText = indicator.querySelector('.datashield-status-text');
-      const statusDot = indicator.querySelector('.datashield-status-dot');
-      if (this.isActive) {
-        statusText.textContent = 'Shadow Shield: ON';
-        statusDot.classList.add('active');
-        indicator.classList.add('active');
-      } else {
-        statusText.textContent = 'Shadow Shield: OFF';
-        statusDot.classList.remove('active');
-        indicator.classList.remove('active');
-      }
-    }
+    // Floating indicator is now managed via Shadow DOM in content.js
+    // It auto-updates from chrome.storage.onChanged events — no direct DOM access needed.
+    console.log('Shadow Shield: FileInterceptor status - secureMode:', this.isActive);
   },
 
   observeDOM() {
@@ -330,17 +319,8 @@ const FileInterceptor = {
       const stats = result.sessionStats || { totalFiles: 0, totalSessions: 0 };
       stats.totalFiles += 1;
 
+      // Setting protectedFiles triggers storage.onChanged → Shadow DOM indicator auto-updates
       chrome.storage.local.set({ protectedFiles: files, sessionStats: stats });
-
-      // Update floating indicator count
-      const indicator = document.getElementById('datashield-indicator');
-      if (indicator) {
-        const countBadge = indicator.querySelector('.datashield-file-count');
-        if (countBadge) {
-          countBadge.textContent = files.length + ' files';
-          countBadge.style.display = 'inline-block';
-        }
-      }
     });
   }
 };

@@ -136,36 +136,37 @@ function checkActiveSessions() {
 }
 
 function triggerSecureModeWarning() {
-  // Check if an alarm already exists to avoid spamming
-  chrome.alarms.get('autoOffWarning', (existingWarning) => {
-    chrome.alarms.get('autoOffGrace', (existingGrace) => {
-      if (existingWarning || existingGrace) return; // Already in a warning cycle
+  // Use Promise-based alarm check for simpler, faster guard logic
+  Promise.all([
+    chrome.alarms.get('autoOffWarning'),
+    chrome.alarms.get('autoOffGrace')
+  ]).then(([existingWarning, existingGrace]) => {
+    if (existingWarning || existingGrace) return; // Already in a warning cycle
 
-      chrome.storage.local.get(['settings'], (result) => {
-        const minutes = result.settings?.autoOffMinutes ?? 5;
+    chrome.storage.local.get(['settings'], (result) => {
+      const minutes = result.settings?.autoOffMinutes ?? 5;
 
-        // 0 means "Never auto-off"
-        if (minutes === 0) {
-          chrome.action.setBadgeText({ text: 'ON' });
-          chrome.action.setBadgeBackgroundColor({ color: '#0d9d58' }); // Green
-          return;
-        }
+      // 0 means "Never auto-off"
+      if (minutes === 0) {
+        chrome.action.setBadgeText({ text: 'ON' });
+        chrome.action.setBadgeBackgroundColor({ color: '#0d9d58' });
+        return;
+      }
 
-        console.log(`Shadow Shield: No AI tabs detected — starting ${minutes}-minute auto-off timer.`);
+      console.log(`Shadow Shield: No AI tabs detected — starting ${minutes}-minute auto-off timer.`);
 
-        // Store when the timer started so popup can show countdown
-        chrome.storage.local.set({ timerStartedAt: Date.now(), timerMinutes: minutes });
+      // Store when the timer started so popup can show countdown
+      chrome.storage.local.set({ timerStartedAt: Date.now(), timerMinutes: minutes });
 
-        if (minutes <= 1) {
-          // Very short timer — skip to warning notification immediately
-          showExpiryWarning(minutes);
-        } else {
-          // Stage 1: set a warning alarm that fires 1 min before expiry
-          chrome.alarms.create('autoOffWarning', { delayInMinutes: minutes - 1 });
-          chrome.action.setBadgeText({ text: `${minutes}m` });
-          chrome.action.setBadgeBackgroundColor({ color: '#f9ab00' }); // Warning yellow
-        }
-      });
+      if (minutes <= 2) {
+        // Short timer (≤2 min) — skip to warning notification immediately for fast response
+        showExpiryWarning(minutes);
+      } else {
+        // Stage 1: set a warning alarm that fires 1 min before expiry
+        chrome.alarms.create('autoOffWarning', { delayInMinutes: minutes - 1 });
+        chrome.action.setBadgeText({ text: `${minutes}m` });
+        chrome.action.setBadgeBackgroundColor({ color: '#f9ab00' });
+      }
     });
   });
 }
@@ -277,6 +278,7 @@ function turnOffSecureMode(auto = false) {
         ? `Shadow Shield was automatically turned off because no AI platform was detected for ${timerDuration} minute(s). Open an AI site and re-enable Secure Mode to resume protection.`
         : 'Secure Mode has been turned off.';
 
+      // Chrome system notification (not blockable by ad-blockers)
       chrome.notifications.create({
         type: 'basic',
         iconUrl: 'assets/icons/icon128.png',
@@ -288,6 +290,18 @@ function turnOffSecureMode(auto = false) {
         message,
         auto ? 'warning' : 'info'
       );
+
+      // Broadcast in-page notification to ALL open tabs (Shadow DOM, ad-blocker safe)
+      chrome.tabs.query({}, (tabs) => {
+        for (const tab of tabs) {
+          try {
+            chrome.tabs.sendMessage(tab.id, {
+              action: 'showAutoOffNotification',
+              message: message
+            }).catch(() => { /* tab may not have content script */ });
+          } catch (e) { /* ignore */ }
+        }
+      });
     });
   });
 }

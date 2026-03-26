@@ -12,10 +12,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const platformIcon = document.getElementById('platform-icon');
   const timerDisplay = document.getElementById('timer-display');
   const timerCountdown = document.getElementById('timer-countdown');
+  const timerIcon = document.getElementById('timer-icon');
+  const timerLabel = document.getElementById('timer-label');
   let countdownInterval = null;
 
   // Load initial state
-  chrome.storage.local.get(['secureMode', 'protectedFiles', 'sessionStats', 'timerStartedAt', 'timerMinutes'], (result) => {
+  chrome.storage.local.get(['secureMode', 'protectedFiles', 'sessionStats', 'timerStartedAt', 'timerMinutes', 'settings'], (result) => {
     const isSecure = result.secureMode || false;
     toggle.checked = isSecure;
     updateUI(isSecure);
@@ -24,9 +26,13 @@ document.addEventListener('DOMContentLoaded', () => {
       renderFilesList(result.protectedFiles);
     }
 
-    // Start countdown if timer is active
-    if (isSecure && result.timerStartedAt && result.timerMinutes) {
-      startCountdown(result.timerStartedAt, result.timerMinutes);
+    // Show timer status when ON
+    if (isSecure) {
+      if (result.timerStartedAt && result.timerMinutes) {
+        startCountdown(result.timerStartedAt, result.timerMinutes);
+      } else {
+        showTimerStatus(result.settings);
+      }
     }
   });
 
@@ -90,10 +96,11 @@ document.addEventListener('DOMContentLoaded', () => {
       stopCountdown();
     } else {
       // Start session
-      chrome.storage.local.get(['sessionStats'], (res) => {
+      chrome.storage.local.get(['sessionStats', 'settings'], (res) => {
         const stats = res.sessionStats || { totalFiles: 0, totalSessions: 0 };
         stats.totalSessions += 1;
         chrome.storage.local.set({ sessionStats: stats });
+        showTimerStatus(res.settings);
       });
     }
 
@@ -113,11 +120,37 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ── Countdown Timer ──────────────────────────────────────────
+
+  /**
+   * Show timer status when Secure Mode is ON but no countdown is active.
+   * Displays the configured auto-off setting.
+   */
+  function showTimerStatus(settings) {
+    stopCountdown();
+    const minutes = settings?.autoOffMinutes ?? 5;
+    timerDisplay.style.display = 'flex';
+    timerDisplay.classList.remove('expiring');
+    timerDisplay.classList.add('protected');
+
+    if (minutes === 0) {
+      timerIcon.textContent = '🛡️';
+      timerCountdown.textContent = '∞';
+      timerLabel.textContent = 'always on';
+    } else {
+      timerIcon.textContent = '🛡️';
+      timerCountdown.textContent = `${minutes}m`;
+      timerLabel.textContent = 'auto-off timer';
+    }
+  }
+
   function startCountdown(startedAt, minutes) {
     stopCountdown(); // Clear any existing interval
     const expiryMs = startedAt + (minutes * 60 * 1000);
 
     timerDisplay.style.display = 'flex';
+    timerDisplay.classList.remove('protected');
+    timerIcon.textContent = '⏱️';
+    timerLabel.textContent = 'until auto-off';
 
     function tick() {
       const remaining = Math.max(0, Math.floor((expiryMs - Date.now()) / 1000));
@@ -150,7 +183,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     timerDisplay.style.display = 'none';
     timerDisplay.classList.remove('expiring');
+    timerDisplay.classList.remove('protected');
     timerCountdown.textContent = '--:--';
+    timerIcon.textContent = '⏱️';
+    timerLabel.textContent = 'until auto-off';
   }
 
   function renderFilesList(files) {
@@ -240,9 +276,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       // Timer started/cleared from background
       if (changes.timerStartedAt || changes.timerMinutes) {
-        chrome.storage.local.get(['secureMode', 'timerStartedAt', 'timerMinutes'], (result) => {
+        chrome.storage.local.get(['secureMode', 'timerStartedAt', 'timerMinutes', 'settings'], (result) => {
           if (result.secureMode && result.timerStartedAt && result.timerMinutes) {
             startCountdown(result.timerStartedAt, result.timerMinutes);
+          } else if (result.secureMode) {
+            showTimerStatus(result.settings);
           } else {
             stopCountdown();
           }

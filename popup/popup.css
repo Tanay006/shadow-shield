@@ -269,6 +269,22 @@ input:checked~.slider .toggle-icon {
   }
 }
 
+.timer-display.protected {
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.25);
+  animation: none;
+}
+
+.timer-display.protected .timer-countdown {
+  color: var(--success);
+  font-size: 15px;
+}
+
+.timer-display.protected .timer-label {
+  color: var(--success);
+  opacity: 0.8;
+}
+
 /* Stats Card */
 .stats-card {
   display: flex;

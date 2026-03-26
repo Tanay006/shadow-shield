@@ -80,50 +80,132 @@ function init() {
 }
 
 /* ═══════════════════════════════════════════════════════
-   Floating Indicator
+   Floating Indicator — Shadow DOM (Ad-Blocker Safe)
    ═══════════════════════════════════════════════════════ */
+
+// Persistent reference to the shadow root for the floating indicator
+let _indicatorShadow = null;
+let _indicatorHost = null;
+
+// Inline CSS for the indicator (inside shadow DOM, unreachable by ad-blockers)
+const INDICATOR_SHADOW_CSS = `
+  :host {
+    all: initial;
+    position: fixed !important;
+    bottom: 20px !important;
+    right: 20px !important;
+    z-index: 2147483646 !important;
+    display: block !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    pointer-events: auto !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  .ss-fi {
+    background: white;
+    border-radius: 50px;
+    padding: 8px 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid #e5e7eb;
+  }
+  .ss-fi:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+  }
+  .ss-fi.ss-on {
+    border-color: #0d9d58;
+    background: #f0fdf4;
+  }
+  .ss-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background-color: #9ca3af;
+    transition: background-color 0.3s;
+  }
+  .ss-dot.ss-on {
+    background-color: #0d9d58;
+    box-shadow: 0 0 8px rgba(13,157,88,0.6);
+    animation: ss-pulse 2s infinite;
+  }
+  .ss-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+  }
+  .ss-count {
+    background-color: #1a73e8;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 700;
+  }
+  @keyframes ss-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(13,157,88,0.7); }
+    70%  { box-shadow: 0 0 0 6px rgba(13,157,88,0); }
+    100% { box-shadow: 0 0 0 0 rgba(13,157,88,0); }
+  }
+`;
 
 function injectFloatingIndicator() {
   chrome.storage.local.get(['settings', 'secureMode', 'protectedFiles'], (result) => {
     if (result.settings?.showFloatingIndicator === false) return;
+    if (_indicatorHost && document.body.contains(_indicatorHost)) return;
 
-    const existing = document.getElementById('datashield-indicator');
-    if (existing) return;
+    // Create the host element with a generic tag
+    const host = document.createElement('div');
+    host.setAttribute('data-ss-fi', '1');
+    // Attach a CLOSED shadow root so external scripts/ad-blockers can't access internals
+    const shadow = host.attachShadow({ mode: 'closed' });
 
+    // Inject styles
+    const style = document.createElement('style');
+    style.textContent = INDICATOR_SHADOW_CSS;
+    shadow.appendChild(style);
+
+    // Build indicator DOM
     const indicator = document.createElement('div');
-    indicator.id = 'datashield-indicator';
-    indicator.className = result.secureMode ? 'active' : '';
+    indicator.className = 'ss-fi' + (result.secureMode ? ' ss-on' : '');
 
     const fileCount = result.protectedFiles ? result.protectedFiles.length : 0;
-    const statusText = result.secureMode ? 'Shadow Shield: ON' : 'Shadow Shield: OFF';
+    const statusLabel = result.secureMode ? 'Shadow Shield: ON' : 'Shadow Shield: OFF';
 
     const dot = document.createElement('div');
-    dot.className = 'datashield-status-dot' + (result.secureMode ? ' active' : '');
+    dot.className = 'ss-dot' + (result.secureMode ? ' ss-on' : '');
 
     const textSpan = document.createElement('span');
-    textSpan.className = 'datashield-status-text';
-    textSpan.textContent = statusText;
+    textSpan.className = 'ss-text';
+    textSpan.textContent = statusLabel;
 
     const countSpan = document.createElement('span');
-    countSpan.className = 'datashield-file-count';
+    countSpan.className = 'ss-count';
     countSpan.style.display = result.secureMode ? 'inline-block' : 'none';
     countSpan.textContent = fileCount + ' files';
 
     indicator.appendChild(dot);
     indicator.appendChild(textSpan);
     indicator.appendChild(countSpan);
+    shadow.appendChild(indicator);
 
-    document.body.appendChild(indicator);
+    document.body.appendChild(host);
+    _indicatorShadow = shadow;
+    _indicatorHost = host;
   });
 }
 
 /**
  * Update the floating indicator live when secureMode or protectedFiles change.
+ * Queries inside the closed shadow root (via stored reference).
  */
 function updateFloatingIndicator() {
-  const indicator = document.getElementById('datashield-indicator');
-  if (!indicator) {
-    // Not injected yet — try injecting
+  if (!_indicatorShadow || !_indicatorHost || !document.body.contains(_indicatorHost)) {
+    _indicatorShadow = null;
+    _indicatorHost = null;
     injectFloatingIndicator();
     return;
   }
@@ -132,19 +214,22 @@ function updateFloatingIndicator() {
     const isSecure = result.secureMode || false;
     const fileCount = result.protectedFiles ? result.protectedFiles.length : 0;
 
-    indicator.className = isSecure ? 'active' : '';
-
-    const dot = indicator.querySelector('.datashield-status-dot');
-    if (dot) {
-      dot.className = 'datashield-status-dot' + (isSecure ? ' active' : '');
+    const indicator = _indicatorShadow.querySelector('.ss-fi');
+    if (indicator) {
+      indicator.className = 'ss-fi' + (isSecure ? ' ss-on' : '');
     }
 
-    const textSpan = indicator.querySelector('.datashield-status-text');
+    const dot = _indicatorShadow.querySelector('.ss-dot');
+    if (dot) {
+      dot.className = 'ss-dot' + (isSecure ? ' ss-on' : '');
+    }
+
+    const textSpan = _indicatorShadow.querySelector('.ss-text');
     if (textSpan) {
       textSpan.textContent = isSecure ? 'Shadow Shield: ON' : 'Shadow Shield: OFF';
     }
 
-    const countSpan = indicator.querySelector('.datashield-file-count');
+    const countSpan = _indicatorShadow.querySelector('.ss-count');
     if (countSpan) {
       countSpan.style.display = isSecure ? 'inline-block' : 'none';
       countSpan.textContent = fileCount + ' files';
@@ -570,5 +655,127 @@ function observeInputs() {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'platformDetected') {
     console.log('Shadow Shield: Detected platform ' + request.platform);
+  } else if (request.action === 'showAutoOffNotification') {
+    showAutoOffBanner(request.message);
   }
 });
+
+/* ═══════════════════════════════════════════════════════
+   Auto-OFF Banner — Shadow DOM (Ad-Blocker Safe)
+   ═══════════════════════════════════════════════════════ */
+
+function showAutoOffBanner(message) {
+  // Prevent duplicate banners
+  const existing = document.querySelector('[data-ss-aob]');
+  if (existing) existing.remove();
+
+  const host = document.createElement('div');
+  host.setAttribute('data-ss-aob', '1');
+  const shadow = host.attachShadow({ mode: 'closed' });
+
+  const style = document.createElement('style');
+  style.textContent = `
+    :host {
+      all: initial;
+      position: fixed !important;
+      top: 16px !important;
+      left: 50% !important;
+      transform: translateX(-50%) translateY(-120%) !important;
+      z-index: 2147483647 !important;
+      display: block !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      pointer-events: auto !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      transition: transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275) !important;
+    }
+    :host(.ss-visible) {
+      transform: translateX(-50%) translateY(0) !important;
+    }
+    .ss-banner {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid #f87171;
+      border-radius: 12px;
+      padding: 14px 20px;
+      box-shadow: 0 8px 32px rgba(248,113,113,0.25);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      max-width: 520px;
+      min-width: 360px;
+    }
+    .ss-icon { font-size: 22px; flex-shrink: 0; }
+    .ss-body { flex: 1; }
+    .ss-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f87171;
+      margin-bottom: 2px;
+    }
+    .ss-msg {
+      font-size: 12px;
+      color: #cbd5e1;
+      line-height: 1.4;
+    }
+    .ss-close {
+      background: rgba(248,113,113,0.15);
+      border: none;
+      color: #f87171;
+      font-size: 16px;
+      width: 28px; height: 28px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .ss-close:hover { background: rgba(248,113,113,0.3); }
+  `;
+  shadow.appendChild(style);
+
+  const banner = document.createElement('div');
+  banner.className = 'ss-banner';
+
+  const icon = document.createElement('span');
+  icon.className = 'ss-icon';
+  icon.textContent = '⏰';
+
+  const body = document.createElement('div');
+  body.className = 'ss-body';
+  const title = document.createElement('div');
+  title.className = 'ss-title';
+  title.textContent = 'Shadow Shield — Protection OFF';
+  const msg = document.createElement('div');
+  msg.className = 'ss-msg';
+  msg.textContent = message || 'Secure Mode has been turned off. Open an AI platform and re-enable to resume protection.';
+  body.appendChild(title);
+  body.appendChild(msg);
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'ss-close';
+  closeBtn.textContent = '✕';
+  closeBtn.addEventListener('click', () => dismissBanner(host));
+
+  banner.appendChild(icon);
+  banner.appendChild(body);
+  banner.appendChild(closeBtn);
+  shadow.appendChild(banner);
+
+  document.body.appendChild(host);
+
+  // Animate in
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => { host.classList.add('ss-visible'); });
+  });
+
+  // Auto-dismiss after 10 seconds
+  setTimeout(() => dismissBanner(host), 10000);
+}
+
+function dismissBanner(host) {
+  if (!host || !host.parentNode) return;
+  host.classList.remove('ss-visible');
+  setTimeout(() => { if (host.parentNode) host.remove(); }, 400);
+}
