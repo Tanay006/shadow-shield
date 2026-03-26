@@ -77,12 +77,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
           showContent();
         } catch (innerErr) {
-          console.error('DataShield Report: Error processing data', innerErr);
+          console.error('Shadow Shield Report: Error processing data', innerErr);
           showError('Error processing report data: ' + innerErr.message);
         }
       });
     } catch (err) {
-      console.error('DataShield Report: Error loading report', err);
+      console.error('Shadow Shield Report: Error loading report', err);
       showError('Error loading report: ' + err.message);
     }
   }

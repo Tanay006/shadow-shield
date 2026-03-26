@@ -126,6 +126,9 @@ const ResponseScanner = {
     _scanNode(node) {
         if (!node || this._scannedNodes.has(node)) return;
 
+        // Don't scan if Secure Mode is off
+        if (typeof dsSecureMode !== 'undefined' && !dsSecureMode) return;
+
         // Check if this node is, or is inside, a response container
         let isResponse = false;
         for (const sel of this.RESPONSE_SELECTORS) {
@@ -384,6 +387,10 @@ const ResponseScanner = {
             this._observer.disconnect();
             this._observer = null;
         }
+        // Remove all existing warning banners from the page
+        document.querySelectorAll('.datashield-system-warning').forEach(el => {
+            if (el.parentNode) el.parentNode.removeChild(el);
+        });
     }
 };
 

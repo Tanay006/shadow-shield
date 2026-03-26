@@ -45,11 +45,11 @@ const FileInterceptor = {
       const statusText = indicator.querySelector('.datashield-status-text');
       const statusDot = indicator.querySelector('.datashield-status-dot');
       if (this.isActive) {
-        statusText.textContent = 'DataShield: ON';
+        statusText.textContent = 'Shadow Shield: ON';
         statusDot.classList.add('active');
         indicator.classList.add('active');
       } else {
-        statusText.textContent = 'DataShield: OFF';
+        statusText.textContent = 'Shadow Shield: OFF';
         statusDot.classList.remove('active');
         indicator.classList.remove('active');
       }

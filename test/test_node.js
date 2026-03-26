@@ -33,7 +33,7 @@ function test(name, fn) {
     }
 }
 
-console.log('\n🛡️  DataShield AI — Node.js Test Suite\n');
+console.log('\n🛡️  Shadow Shield AI — Node.js Test Suite\n');
 console.log('━'.repeat(50));
 
 // ── Detection Tests ──

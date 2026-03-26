@@ -35,16 +35,18 @@ function init() {
     console.log('Shadow Shield: Initial state - secureMode:', dsSecureMode, 'scanEnabled:', dsScanEnabled);
 
     // Start features only after we have state
-    if (window.FileInterceptor) {
-      window.FileInterceptor.init();
-    }
-    if (window.ResponseScanner) {
-      window.ResponseScanner.init();
+    if (dsSecureMode) {
+      if (window.FileInterceptor) {
+        window.FileInterceptor.init();
+      }
+      if (window.ResponseScanner) {
+        window.ResponseScanner.init();
+      }
     }
     injectFloatingIndicator();
     if (dsScanEnabled) {
-      try { interceptSendActions(); } catch (e) { console.warn('DataShield: interceptSendActions failed', e); }
-      try { observeInputs(); } catch (e) { console.warn('DataShield: observeInputs failed', e); }
+      try { interceptSendActions(); } catch (e) { console.warn('Shadow Shield: interceptSendActions failed', e); }
+      try { observeInputs(); } catch (e) { console.warn('Shadow Shield: observeInputs failed', e); }
     }
   });
 
@@ -52,9 +54,20 @@ function init() {
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace !== 'local') return;
     if (changes.secureMode) {
+      const wasSecure = dsSecureMode;
       dsSecureMode = changes.secureMode.newValue;
       console.log('Shadow Shield: secureMode changed to', dsSecureMode);
       updateFloatingIndicator();
+
+      // Start/stop scanners based on secureMode
+      if (dsSecureMode && !wasSecure) {
+        // Turned ON — start scanners
+        if (window.FileInterceptor) window.FileInterceptor.init();
+        if (window.ResponseScanner) window.ResponseScanner.init();
+      } else if (!dsSecureMode && wasSecure) {
+        // Turned OFF — stop ResponseScanner
+        if (window.ResponseScanner) window.ResponseScanner.destroy();
+      }
     }
     if (changes.settings) {
       const s = changes.settings.newValue || {};
@@ -82,7 +95,7 @@ function injectFloatingIndicator() {
     indicator.className = result.secureMode ? 'active' : '';
 
     const fileCount = result.protectedFiles ? result.protectedFiles.length : 0;
-    const statusText = result.secureMode ? 'DataShield: ON' : 'DataShield: OFF';
+    const statusText = result.secureMode ? 'Shadow Shield: ON' : 'Shadow Shield: OFF';
 
     const dot = document.createElement('div');
     dot.className = 'datashield-status-dot' + (result.secureMode ? ' active' : '');
@@ -128,7 +141,7 @@ function updateFloatingIndicator() {
 
     const textSpan = indicator.querySelector('.datashield-status-text');
     if (textSpan) {
-      textSpan.textContent = isSecure ? 'DataShield: ON' : 'DataShield: OFF';
+      textSpan.textContent = isSecure ? 'Shadow Shield: ON' : 'Shadow Shield: OFF';
     }
 
     const countSpan = indicator.querySelector('.datashield-file-count');
