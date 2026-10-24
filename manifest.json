@@ -57,6 +57,7 @@
       ],
       "js": [
         "libs/pdf.min.js",
+        "libs/pdf.worker.min.js",
         "libs/mammoth.browser.min.js",
         "utils/helpers.js",
         "utils/trainingData.js",
