@@ -27,7 +27,7 @@
         <a href="#how-it-works">How It Works</a>
         <a href="#platforms">Platforms</a>
         <a href="#privacy">Privacy</a>
-        <a href="https://github.com/Tanay006/shadow-ai" target="_blank" class="nav-cta">
+        <a href="https://github.com/Tanay006/shadow-shield" target="_blank" class="nav-cta">
           <span class="gh-icon">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <path
@@ -37,6 +37,10 @@
           GitHub
         </a>
       </div>
+      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to light theme">
+        <span class="theme-icon" aria-hidden="true">☀️</span>
+        <span class="theme-label">Light</span>
+      </button>
       <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu">
         <span></span><span></span><span></span>
       </button>
@@ -61,7 +65,7 @@
         SSNs, credit cards, emails, addresses — all intercepted and replaced with realistic fake data in real-time.
       </p>
       <div class="hero-actions">
-        <a href="https://github.com/Tanay006/shadow-ai" target="_blank" class="btn btn-primary">
+        <a href="https://github.com/Tanay006/shadow-shield" target="_blank" class="btn btn-primary">
           <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
             <path
               d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
@@ -314,7 +318,7 @@
         <h2>Ready to protect your AI conversations?</h2>
         <p>Open-source, local-only, zero data collection. Your privacy is our only priority.</p>
         <div class="cta-actions">
-          <a href="https://github.com/Tanay006/shadow-ai" target="_blank" class="btn btn-primary btn-lg">
+          <a href="https://github.com/Tanay006/shadow-shield" target="_blank" class="btn btn-primary btn-lg">
             <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
               <path
                 d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
@@ -340,7 +344,7 @@
       </div>
       <p class="footer-copy">Built with ❤️ for privacy. &copy; 2026 Shadow Shield AI.</p>
       <div class="footer-links">
-        <a href="https://github.com/Tanay006/shadow-ai" target="_blank">GitHub</a>
+        <a href="https://github.com/Tanay006/shadow-shield" target="_blank">GitHub</a>
         <a href="#features">Features</a>
         <a href="#privacy">Privacy</a>
       </div>
@@ -348,6 +352,28 @@
   </footer>
 
   <script>
+    // Restore the visitor's theme choice before initializing interactions.
+    const themeToggle = document.getElementById('theme-toggle');
+    const storedTheme = localStorage.getItem('shadow-shield-theme');
+    const initialTheme = storedTheme || 'dark';
+    document.documentElement.dataset.theme = initialTheme;
+
+    function updateThemeToggle(theme) {
+      const isDark = theme === 'dark';
+      themeToggle.setAttribute('aria-label', `Switch to ${isDark ? 'light' : 'dark'} theme`);
+      themeToggle.setAttribute('aria-pressed', String(isDark));
+      themeToggle.querySelector('.theme-icon').textContent = isDark ? '☀️' : '🌙';
+      themeToggle.querySelector('.theme-label').textContent = isDark ? 'Light' : 'Dark';
+    }
+
+    updateThemeToggle(initialTheme);
+    themeToggle.addEventListener('click', () => {
+      const nextTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = nextTheme;
+      localStorage.setItem('shadow-shield-theme', nextTheme);
+      updateThemeToggle(nextTheme);
+    });
+
     // Navbar scroll effect
     const nav = document.getElementById('nav');
     window.addEventListener('scroll', () => {

@@ -34,11 +34,12 @@ function init() {
     dsScanEnabled = settings.scanEnabled !== false;
     console.log('Shadow Shield: Initial state - secureMode:', dsSecureMode, 'scanEnabled:', dsScanEnabled);
 
-    // Start features only after we have state
+    // Always attach file listeners so a later Secure Mode toggle is handled
+    // reliably; FileInterceptor itself gates scanning on the cached state.
+    if (window.FileInterceptor) {
+      window.FileInterceptor.init();
+    }
     if (dsSecureMode) {
-      if (window.FileInterceptor) {
-        window.FileInterceptor.init();
-      }
       if (window.ResponseScanner) {
         window.ResponseScanner.init();
       }

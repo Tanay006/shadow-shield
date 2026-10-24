@@ -10,6 +10,8 @@ const FileInterceptor = {
   scanEnabled: true,
 
   init() {
+    if (this.isInitialized) return;
+    this.isInitialized = true;
     console.log('Shadow Shield: FileInterceptor initializing...');
     this.observeDOM();
     this.attachListeners();
@@ -128,6 +130,11 @@ const FileInterceptor = {
       '.pdf', '.docx'
     ];
 
+    if (file.type === 'application/pdf' ||
+      file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      return true;
+    }
+
     const parts = file.name.split('.');
     if (parts.length > 1) {
       const ext = '.' + parts.pop().toLowerCase();
@@ -183,6 +190,14 @@ const FileInterceptor = {
               scanResult = window.DataSanitizer.scanWithPositions(text);
               findings = scanResult.findings;
               console.log('Shadow Shield: Scan result for', file.name, '-', scanResult.overallRisk, 'with', findings.length, 'findings');
+            } else if (!text && (fileName.endsWith('.pdf') || fileName.endsWith('.docx'))) {
+              console.warn('Shadow Shield: No text could be extracted from', file.name);
+              if (window.NotificationManager) {
+                window.NotificationManager.showToast(
+                  '⚠️ ' + file.name + ' could not be read. Upload scanning was unavailable for this file.',
+                  'warning'
+                );
+              }
             }
           } catch (err) {
             console.error('Shadow Shield: Error reading file:', file.name, err);

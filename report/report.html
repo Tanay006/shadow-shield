@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <title>Shadow Shield - Protection Report</title>
   <link rel="stylesheet" href="report.css">
+  <link rel="stylesheet" href="../styles/theme.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 
@@ -15,6 +16,10 @@
         <img src="../assets/icons/icon128.png" alt="Shadow Shield" class="report-logo">
         <h1>Protection Report</h1>
       </div>
+      <button class="theme-toggle" data-theme-toggle type="button">
+        <span class="theme-icon" aria-hidden="true">☀️</span>
+        <span class="theme-label">Light</span>
+      </button>
     </header>
 
     <!-- Error Fallback Banner (hidden by default) -->
@@ -81,6 +86,7 @@
     </div>
   </div>
   <script src="../utils/helpers.js"></script>
+  <script src="../utils/theme.js"></script>
   <script src="report.js"></script>
 </body>
 

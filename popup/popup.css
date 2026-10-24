@@ -15,6 +15,30 @@
   --card-border: rgba(255, 255, 255, 0.06);
 }
 
+:root[data-theme="light"] {
+  --dark: #1F2937;
+  --grey: #64748B;
+  --light: rgba(15, 23, 42, 0.06);
+  --white: #1F2937;
+  --border: rgba(15, 23, 42, 0.12);
+  --bg-primary: #F8FAFC;
+  --bg-secondary: #FFFFFF;
+  --card-bg: rgba(255, 255, 255, 0.85);
+  --card-border: rgba(15, 23, 42, 0.1);
+}
+
+:root[data-theme="light"] body {
+  background: linear-gradient(145deg, #F8FAFC 0%, #EEF2FF 40%, #F8FAFC 100%);
+}
+
+:root[data-theme="light"] .slider {
+  background-color: #CBD5E1;
+}
+
+:root[data-theme="light"] .slider:before {
+  background-color: #FFFFFF;
+}
+
 body {
   width: 380px;
   margin: 0;

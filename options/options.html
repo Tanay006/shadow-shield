@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <title>Shadow Shield - Settings</title>
   <link rel="stylesheet" href="options.css">
+  <link rel="stylesheet" href="../styles/theme.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 
@@ -12,6 +13,10 @@
   <div class="options-container">
     <header>
       <h1>Shadow Shield Settings</h1>
+      <button class="theme-toggle" data-theme-toggle type="button">
+        <span class="theme-icon" aria-hidden="true">☀️</span>
+        <span class="theme-label">Light</span>
+      </button>
     </header>
 
     <section class="settings-group">
@@ -97,6 +102,7 @@
 
     <div id="save-status" class="save-status">Settings Saved</div>
   </div>
+  <script src="../utils/theme.js"></script>
   <script src="options.js"></script>
 </body>
 

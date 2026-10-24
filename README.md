@@ -172,5 +172,5 @@ This project is open source. See the repository for license details.
 ---
 
 <p align="center">
-  Built with ❤️ for privacy by <a href="https://github.com/Tanay006">Tanay</a>
+  Built for privacy by <a href="https://github.com/Tanay006/shadow-shield">Tanay Chothani & Aadarsh Sundrani</a>
 </p>

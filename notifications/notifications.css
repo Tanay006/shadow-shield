@@ -21,6 +21,22 @@
     }
 }
 
+:root[data-theme="light"] {
+      --bg: #F8FAFC;
+      --card: #FFFFFF;
+      --text: #1E293B;
+      --text-muted: #64748B;
+      --border: #E2E8F0;
+}
+
+:root[data-theme="dark"] {
+      --bg: #0F172A;
+      --card: #1E293B;
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+      --border: #334155;
+}
+
 body {
     margin: 0;
     font-family: 'Inter', sans-serif;
