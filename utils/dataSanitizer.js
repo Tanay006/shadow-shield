@@ -158,7 +158,12 @@ const DataSanitizer = {
    */
   scanWithPositions(text) {
     if (!text || typeof text !== 'string') {
-      return { findings: [], overallRisk: 'SAFE', confidence: 0 };
+      return {
+        findings: [],
+        overallRisk: 'SAFE',
+        confidence: 0,
+        detected: { phoneNumber: false, name: false, gmailId: false }
+      };
     }
 
     const findings = [];
@@ -341,7 +346,16 @@ const DataSanitizer = {
       confidence = Math.max(confidence, f.confidence);
     }
 
-    return { findings, overallRisk, confidence };
+    return {
+      findings,
+      overallRisk,
+      confidence,
+      detected: {
+        phoneNumber: findings.some(f => f.type === 'phone') || false,
+        name: findings.some(f => f.type === 'name') || false,
+        gmailId: findings.some(f => f.type === 'email' && /@gmail\.com$/i.test(f.value)) || false
+      }
+    };
   },
 
   /**

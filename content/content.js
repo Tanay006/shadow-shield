@@ -16,6 +16,7 @@ let dsSecureMode = false;
 let dsScanEnabled = true;
 let dsProcessing = false;
 let dsSkipNextSend = false; // Skip scan on re-triggered send after replacement
+let dsSkipNextSendUntil = 0;
 
 // Wait for DOM to be ready
 if (document.readyState === 'loading') {
@@ -329,6 +330,28 @@ function findSendButton() {
   return null;
 }
 
+function shouldSkipNextSend() {
+  if (!dsSkipNextSend) return false;
+  if (Date.now() > dsSkipNextSendUntil) {
+    dsSkipNextSend = false;
+    dsSkipNextSendUntil = 0;
+    return false;
+  }
+  return true;
+}
+
+function skipNextSend() {
+  dsSkipNextSend = true;
+  dsSkipNextSendUntil = Date.now() + 1000;
+  const skipUntil = dsSkipNextSendUntil;
+  setTimeout(() => {
+    if (dsSkipNextSendUntil === skipUntil) {
+      dsSkipNextSend = false;
+      dsSkipNextSendUntil = 0;
+    }
+  }, 1000);
+}
+
 /**
  * SYNCHRONOUS handler for send button click.
  * Must call preventDefault BEFORE any async work.
@@ -336,7 +359,7 @@ function findSendButton() {
  */
 function handleSendIntercept(event) {
   // ── All checks are synchronous — no await before preventDefault ──
-  if (dsSkipNextSend) { dsSkipNextSend = false; return; }
+  if (shouldSkipNextSend()) return;
   if (!dsSecureMode) { return; }
   if (!dsScanEnabled) { return; }
   if (dsProcessing) { return; }
@@ -441,7 +464,7 @@ async function showModalAndHandle(inputData, result) {
 
       // Re-trigger send after text is updated — skip scan on this click
       dsProcessing = false;
-      dsSkipNextSend = true;
+      skipNextSend();
       setTimeout(() => {
         const btn = findSendButton();
         if (btn) btn.click();
@@ -453,7 +476,7 @@ async function showModalAndHandle(inputData, result) {
         window.NotificationManager.showToast('⚠️ Sent without replacement.', 'warning');
       }
       dsProcessing = false;
-      dsSkipNextSend = true;
+      skipNextSend();
       setTimeout(() => {
         const btn = findSendButton();
         if (btn) btn.click();
@@ -475,7 +498,7 @@ async function showModalAndHandle(inputData, result) {
  */
 function handleEnterIntercept(event) {
   if (event.key !== 'Enter' || event.shiftKey) return;
-  if (dsSkipNextSend) { dsSkipNextSend = false; return; }
+  if (shouldSkipNextSend()) return;
   if (!dsSecureMode || !dsScanEnabled || dsProcessing) return;
 
   // Only intercept when focused on an input/textfield (not random Enter keys)
@@ -511,6 +534,7 @@ function handleEnterIntercept(event) {
  * SYNCHRONOUS handler for form submit events.
  */
 function handleFormSubmitIntercept(event) {
+  if (shouldSkipNextSend()) return;
   if (!dsSecureMode || !dsScanEnabled || dsProcessing) return;
 
   const inputData = getInputText();

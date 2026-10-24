@@ -56,7 +56,7 @@ test('Email Detection', () => {
 
 test('Phone Detection', () => {
     const r = DataSanitizer.scanWithPositions('Call +1 (555) 123-4567');
-    return r.findings.some(f => f.type === 'phone');
+    return r.findings.some(f => f.type === 'phone') && r.detected.phoneNumber === true;
 });
 
 test('Aadhaar Detection', () => {
@@ -84,7 +84,7 @@ console.log('\n📌 Context Pattern Tests:\n');
 
 test('Labelled Name Detection', () => {
     const r = DataSanitizer.scanWithPositions('Full Name: Rahul Kumar');
-    return r.findings.some(f => f.type === 'name');
+    return r.findings.some(f => f.type === 'name') && r.detected.name === true;
 });
 
 test('Labelled DOB Detection', () => {
@@ -177,7 +177,9 @@ test('Overall Risk Calculation', () => {
 
 test('Safe Text Returns SAFE', () => {
     const r = DataSanitizer.scanWithPositions('Hello this is just a normal message with no PII.');
-    return r.overallRisk === 'SAFE' && r.findings.length === 0;
+    return r.overallRisk === 'SAFE' && r.findings.length === 0 &&
+        r.detected.phoneNumber === false && r.detected.name === false &&
+        r.detected.gmailId === false;
 });
 
 // ── Multi-PII Detection Test ──
@@ -264,4 +266,3 @@ console.log(`\n📊 Results: ${passed} passed, ${failed} failed, ${passed + fail
 console.log(failed === 0 ? '\n🎉 All tests passed!\n' : '\n⚠️  Some tests failed. Review above.\n');
 
 process.exit(failed > 0 ? 1 : 0);
-
