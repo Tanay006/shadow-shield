@@ -34,6 +34,26 @@ const FileInterceptor = {
     }
   },
 
+  safeStorageGet(keys, callback) {
+    try {
+      if (!this.isExtensionContextValid()) return;
+      chrome.storage.local.get(keys, result => {
+        try {
+          if (chrome.runtime.lastError || !this.isExtensionContextValid()) return;
+          callback(result);
+        } catch (error) {
+          if (!this.isContextInvalidatedError(error)) {
+            console.error('Shadow Shield: Storage read failed:', error);
+          }
+        }
+      });
+    } catch (error) {
+      if (!this.isContextInvalidatedError(error)) {
+        console.error('Shadow Shield: Storage read failed:', error);
+      }
+    }
+  },
+
   init() {
     if (this.isInitialized) return;
     this.isInitialized = true;
@@ -42,23 +62,29 @@ const FileInterceptor = {
     this.attachListeners();
     this.checkStatus();
 
-    chrome.storage.onChanged.addListener((changes, namespace) => {
-      if (namespace === 'local') {
-        if (changes.secureMode) {
-          this.isActive = changes.secureMode.newValue;
-          console.log('Shadow Shield: secureMode changed to', this.isActive);
-          this.updateUI();
+    try {
+      chrome.storage.onChanged.addListener((changes, namespace) => {
+        if (namespace === 'local') {
+          if (changes.secureMode) {
+            this.isActive = changes.secureMode.newValue;
+            console.log('Shadow Shield: secureMode changed to', this.isActive);
+            this.updateUI();
+          }
+          if (changes.settings) {
+            const s = changes.settings.newValue || {};
+            this.scanEnabled = s.scanEnabled !== false;
+          }
         }
-        if (changes.settings) {
-          const s = changes.settings.newValue || {};
-          this.scanEnabled = s.scanEnabled !== false;
-        }
+      });
+    } catch (error) {
+      if (!this.isContextInvalidatedError(error)) {
+        console.error('Shadow Shield: Unable to subscribe to storage changes:', error);
       }
-    });
+    }
   },
 
   checkStatus() {
-    chrome.storage.local.get(['secureMode', 'settings'], (result) => {
+    this.safeStorageGet(['secureMode', 'settings'], result => {
       this.isActive = result.secureMode || false;
       this.scanEnabled = !(result.settings && result.settings.scanEnabled === false);
       console.log('Shadow Shield: Status - secureMode:', this.isActive, 'scanEnabled:', this.scanEnabled);
@@ -207,6 +233,7 @@ const FileInterceptor = {
 
         let scanResult = { findings: [], overallRisk: 'SAFE', confidence: 0 };
         let findings = [];
+        let scanAvailable = true;
 
         // Show scanning toast
         if (this.isScannableFile(file)) {
@@ -243,7 +270,14 @@ const FileInterceptor = {
               );
             }
           } catch (err) {
-            console.error('Shadow Shield: Error reading file:', file.name, err);
+            scanAvailable = false;
+            if (!this.isContextInvalidatedError(err)) {
+              console.error('Shadow Shield: Error reading file:', file.name, err);
+            }
+            this.notify(
+              '⚠️ ' + file.name + ' could not be scanned. Upload was blocked for your safety.',
+              'error'
+            );
           }
         } else {
           console.log('Shadow Shield: Non-scannable file type:', file.name);
@@ -252,6 +286,10 @@ const FileInterceptor = {
             '📄 ' + file.name + ' is being shared. Non-text file — content scan unavailable.',
             'info'
           );
+        }
+
+        if (!scanAvailable) {
+          continue;
         }
 
         // ── Show findings modal if PII detected ──
@@ -310,99 +348,88 @@ const FileInterceptor = {
       }
     }
 
-    if (sourceInput && approvedFiles.length > 0) {
-      const dataTransfer = new DataTransfer();
-      approvedFiles.forEach(file => dataTransfer.items.add(file));
-      this.restoringInput = true;
-      sourceInput.files = dataTransfer.files;
-      sourceInput.dispatchEvent(new Event('change', { bubbles: true }));
-    } else if (dropTarget && approvedFiles.length > 0) {
-      const dataTransfer = new DataTransfer();
-      approvedFiles.forEach(file => dataTransfer.items.add(file));
-      this.restoringDrop = true;
-      dropTarget.dispatchEvent(new DragEvent('drop', {
-        bubbles: true,
-        cancelable: true,
-        dataTransfer
-      }));
+    try {
+      if (sourceInput && approvedFiles.length > 0) {
+        const dataTransfer = new DataTransfer();
+        approvedFiles.forEach(file => dataTransfer.items.add(file));
+        this.restoringInput = true;
+        sourceInput.files = dataTransfer.files;
+        sourceInput.dispatchEvent(new Event('change', { bubbles: true }));
+      } else if (dropTarget && approvedFiles.length > 0) {
+        const dataTransfer = new DataTransfer();
+        approvedFiles.forEach(file => dataTransfer.items.add(file));
+        this.restoringDrop = true;
+        dropTarget.dispatchEvent(new DragEvent('drop', {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer
+        }));
+      }
+    } catch (error) {
+      this.restoringInput = false;
+      this.restoringDrop = false;
+      console.error('Shadow Shield: Unable to restore approved upload:', error);
     }
   },
 
   async extractTextFromPDF(file) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const arrayBuffer = await file.arrayBuffer();
+    if (typeof pdfjsLib === 'undefined') {
+      throw new Error('PDF.js is unavailable in the extension context');
+    }
 
-        // Configure PDF.js worker
-        if (typeof pdfjsLib !== 'undefined') {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL('libs/pdf.worker.min.js');
+    if (!this.isExtensionContextValid()) {
+      throw new Error('Extension context invalidated');
+    }
 
-          const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-          const pdf = await loadingTask.promise;
-          let fullText = '';
+    const arrayBuffer = await file.arrayBuffer();
+    pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL('libs/pdf.worker.min.js');
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+    let fullText = '';
 
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items.map(item => item.str).join(' ');
-            fullText += pageText + '\n';
-          }
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+    }
 
-          resolve(fullText);
-        } else {
-          console.warn('Shadow Shield: pdfjsLib not loaded');
-          resolve('');
-        }
-      } catch (err) {
-        console.error('Shadow Shield: PDF extraction error:', err);
-        reject(err);
-      }
-    });
+    if (!fullText.trim()) {
+      throw new Error('PDF contains no selectable text');
+    }
+    return fullText;
   },
 
   async extractTextFromDocx(file) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        if (typeof mammoth !== 'undefined') {
-          const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-          resolve(result.value);
-        } else {
-          console.warn('Shadow Shield: mammoth not loaded');
-          resolve('');
-        }
-      } catch (err) {
-        console.error('Shadow Shield: DOCX extraction error:', err);
-        reject(err);
-      }
-    });
+    if (typeof mammoth === 'undefined') {
+      throw new Error('DOCX parser is unavailable in the extension context');
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    if (!result.value.trim()) {
+      throw new Error('DOCX contains no readable text');
+    }
+    return result.value;
   },
 
   addProtectedFile(fileInfo) {
-    try {
-      if (!this.isExtensionContextValid()) return;
-      chrome.storage.local.get(['protectedFiles', 'sessionStats'], (result) => {
-        try {
-          if (chrome.runtime.lastError || !this.isExtensionContextValid()) return;
-          const files = result.protectedFiles || [];
-          files.push(fileInfo);
+    this.safeStorageGet(['protectedFiles', 'sessionStats'], result => {
+      const files = result.protectedFiles || [];
+      files.push(fileInfo);
 
-          const stats = result.sessionStats || { totalFiles: 0, totalSessions: 0 };
-          stats.totalFiles += 1;
+      const stats = result.sessionStats || { totalFiles: 0, totalSessions: 0 };
+      stats.totalFiles += 1;
 
-          // Setting protectedFiles triggers storage.onChanged → Shadow DOM indicator auto-updates
+      try {
+        if (this.isExtensionContextValid()) {
           chrome.storage.local.set({ protectedFiles: files, sessionStats: stats });
-        } catch (error) {
-          if (!this.isContextInvalidatedError(error)) {
-            console.error('Shadow Shield: Unable to record protected file:', error);
-          }
         }
-      });
-    } catch (error) {
-      if (!this.isContextInvalidatedError(error)) {
-        console.error('Shadow Shield: Unable to record protected file:', error);
+      } catch (error) {
+        if (!this.isContextInvalidatedError(error)) {
+          console.error('Shadow Shield: Unable to record protected file:', error);
+        }
       }
-    }
+    });
   }
 };
 

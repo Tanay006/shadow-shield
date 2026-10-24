@@ -144,11 +144,23 @@ const NotificationManager = {
    * @param {string} message - Notification message.
    */
   sendSystemNotification(title, message) {
-    chrome.runtime.sendMessage({
-      action: 'showSystemNotification',
-      title: title,
-      message: message
-    });
+    try {
+      if (!chrome.runtime || !chrome.runtime.id) return;
+      chrome.runtime.sendMessage({
+        action: 'showSystemNotification',
+        title: title,
+        message: message
+      }, () => {
+        if (chrome.runtime.lastError &&
+          !chrome.runtime.lastError.message.includes('Extension context invalidated')) {
+          console.error('Shadow Shield: System notification failed:', chrome.runtime.lastError);
+        }
+      });
+    } catch (error) {
+      if (!String(error && error.message).includes('Extension context invalidated')) {
+        console.error('Shadow Shield: System notification failed:', error);
+      }
+    }
   }
 };
 
