@@ -121,13 +121,21 @@ const NotificationManager = {
 
     // Log to Notification Center
     const url = window.location.hostname;
-    chrome.runtime.sendMessage({
-      action: 'logNotification',
-      title: 'Activity Alert',
-      message: message,
-      notificationType: type,
-      platform: url
-    });
+    try {
+      if (chrome.runtime && chrome.runtime.id) {
+        chrome.runtime.sendMessage({
+          action: 'logNotification',
+          title: 'Activity Alert',
+          message: message,
+          notificationType: type,
+          platform: url
+        });
+      }
+    } catch (error) {
+      if (!String(error && error.message).includes('Extension context invalidated')) {
+        console.error('Shadow Shield: Notification logging failed:', error);
+      }
+    }
   },
 
   /**

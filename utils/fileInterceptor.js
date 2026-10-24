@@ -8,6 +8,31 @@ const FileInterceptor = {
   isActive: false,
   protectedFiles: [],
   scanEnabled: true,
+  restoringInput: false,
+  restoringDrop: false,
+
+  isExtensionContextValid() {
+    try {
+      return Boolean(chrome.runtime && chrome.runtime.id);
+    } catch (error) {
+      return false;
+    }
+  },
+
+  isContextInvalidatedError(error) {
+    return String(error && error.message).toLowerCase().includes('extension context invalidated');
+  },
+
+  notify(message, type) {
+    if (!window.NotificationManager || !this.isExtensionContextValid()) return;
+    try {
+      window.NotificationManager.showToast(message, type);
+    } catch (error) {
+      if (!String(error && error.message).includes('Extension context invalidated')) {
+        console.error('Shadow Shield: Notification failed:', error);
+      }
+    }
+  },
 
   init() {
     if (this.isInitialized) return;
@@ -86,7 +111,18 @@ const FileInterceptor = {
     console.log('Shadow Shield: File input detected');
     const files = event.target.files;
     if (files && files.length > 0) {
-      this.processFiles(Array.from(files));
+      if (this.restoringInput) {
+        this.restoringInput = false;
+        return;
+      }
+
+      // Stop the page from receiving the original FileList while scanning.
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const input = event.target;
+      const selectedFiles = Array.from(files);
+      input.value = '';
+      this.processFiles(selectedFiles, input);
     }
   },
 
@@ -95,7 +131,15 @@ const FileInterceptor = {
     console.log('Shadow Shield: File drop detected');
     const files = event.dataTransfer.files;
     if (files && files.length > 0) {
-      this.processFiles(Array.from(files));
+      if (this.restoringDrop) {
+        this.restoringDrop = false;
+        return;
+      }
+
+      // Prevent the page from attaching the original files before scanning.
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      this.processFiles(Array.from(files), null, event.target);
     }
   },
 
@@ -147,8 +191,9 @@ const FileInterceptor = {
     return false;
   },
 
-  async processFiles(files) {
+  async processFiles(files, sourceInput = null, dropTarget = null) {
     console.log('Shadow Shield: Processing', files.length, 'file(s)');
+    const approvedFiles = [];
 
     for (const file of files) {
       try {
@@ -164,8 +209,8 @@ const FileInterceptor = {
         let findings = [];
 
         // Show scanning toast
-        if (window.NotificationManager && this.isScannableFile(file)) {
-          window.NotificationManager.showToast('🔍 Scanning ' + file.name + '...', 'info');
+        if (this.isScannableFile(file)) {
+          this.notify('🔍 Scanning ' + file.name + '...', 'info');
         }
 
         if (this.isScannableFile(file)) {
@@ -192,12 +237,10 @@ const FileInterceptor = {
               console.log('Shadow Shield: Scan result for', file.name, '-', scanResult.overallRisk, 'with', findings.length, 'findings');
             } else if (!text && (fileName.endsWith('.pdf') || fileName.endsWith('.docx'))) {
               console.warn('Shadow Shield: No text could be extracted from', file.name);
-              if (window.NotificationManager) {
-                window.NotificationManager.showToast(
-                  '⚠️ ' + file.name + ' could not be read. Upload scanning was unavailable for this file.',
-                  'warning'
-                );
-              }
+              this.notify(
+                '⚠️ ' + file.name + ' could not be read. Upload scanning was unavailable for this file.',
+                'warning'
+              );
             }
           } catch (err) {
             console.error('Shadow Shield: Error reading file:', file.name, err);
@@ -205,12 +248,10 @@ const FileInterceptor = {
         } else {
           console.log('Shadow Shield: Non-scannable file type:', file.name);
           // Still notify the user the file was protected
-          if (window.NotificationManager) {
-            window.NotificationManager.showToast(
-              '📄 ' + file.name + ' is being shared. Non-text file — content scan unavailable.',
-              'info'
-            );
-          }
+          this.notify(
+            '📄 ' + file.name + ' is being shared. Non-text file — content scan unavailable.',
+            'info'
+          );
         }
 
         // ── Show findings modal if PII detected ──
@@ -223,12 +264,10 @@ const FileInterceptor = {
 
           if (decision.action === 'blocked') {
             console.log('Shadow Shield: User blocked file upload:', file.name);
-            if (window.NotificationManager) {
-              window.NotificationManager.showToast(
-                '🚫 File upload awareness: ' + file.name + ' contains ' + findings.length + ' sensitive item(s).',
-                'error'
-              );
-            }
+            this.notify(
+              '🚫 File upload awareness: ' + file.name + ' contains ' + findings.length + ' sensitive item(s).',
+              'error'
+            );
             // Store with blocked flag
             this.addProtectedFile({
               ...fileData,
@@ -243,20 +282,13 @@ const FileInterceptor = {
           }
 
           // User acknowledged the risk
-          if (window.NotificationManager) {
-            window.NotificationManager.showToast(
-              '⚠️ ' + file.name + ': ' + findings.length + ' sensitive item(s) detected. Proceed with caution.',
-              'warning'
-            );
-          }
+          this.notify(
+            '⚠️ ' + file.name + ': ' + findings.length + ' sensitive item(s) detected. Proceed with caution.',
+            'warning'
+          );
         } else if (findings.length === 0 && this.isScannableFile(file)) {
           // Clean file
-          if (window.NotificationManager) {
-            window.NotificationManager.showToast(
-              '✅ ' + file.name + ' scanned. No sensitive data found.',
-              'success'
-            );
-          }
+          this.notify('✅ ' + file.name + ' scanned. No sensitive data found.', 'success');
         }
 
         // Store in protected files list
@@ -269,10 +301,30 @@ const FileInterceptor = {
             findingTypes: [...new Set(findings.map(f => f.label))]
           }
         });
+        approvedFiles.push(file);
 
       } catch (err) {
-        console.error('Shadow Shield: Error processing file:', file.name, err);
+        if (!this.isContextInvalidatedError(err)) {
+          console.error('Shadow Shield: Error processing file:', file.name, err);
+        }
       }
+    }
+
+    if (sourceInput && approvedFiles.length > 0) {
+      const dataTransfer = new DataTransfer();
+      approvedFiles.forEach(file => dataTransfer.items.add(file));
+      this.restoringInput = true;
+      sourceInput.files = dataTransfer.files;
+      sourceInput.dispatchEvent(new Event('change', { bubbles: true }));
+    } else if (dropTarget && approvedFiles.length > 0) {
+      const dataTransfer = new DataTransfer();
+      approvedFiles.forEach(file => dataTransfer.items.add(file));
+      this.restoringDrop = true;
+      dropTarget.dispatchEvent(new DragEvent('drop', {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer
+      }));
     }
   },
 
@@ -327,16 +379,30 @@ const FileInterceptor = {
   },
 
   addProtectedFile(fileInfo) {
-    chrome.storage.local.get(['protectedFiles', 'sessionStats'], (result) => {
-      const files = result.protectedFiles || [];
-      files.push(fileInfo);
+    try {
+      if (!this.isExtensionContextValid()) return;
+      chrome.storage.local.get(['protectedFiles', 'sessionStats'], (result) => {
+        try {
+          if (chrome.runtime.lastError || !this.isExtensionContextValid()) return;
+          const files = result.protectedFiles || [];
+          files.push(fileInfo);
 
-      const stats = result.sessionStats || { totalFiles: 0, totalSessions: 0 };
-      stats.totalFiles += 1;
+          const stats = result.sessionStats || { totalFiles: 0, totalSessions: 0 };
+          stats.totalFiles += 1;
 
-      // Setting protectedFiles triggers storage.onChanged → Shadow DOM indicator auto-updates
-      chrome.storage.local.set({ protectedFiles: files, sessionStats: stats });
-    });
+          // Setting protectedFiles triggers storage.onChanged → Shadow DOM indicator auto-updates
+          chrome.storage.local.set({ protectedFiles: files, sessionStats: stats });
+        } catch (error) {
+          if (!this.isContextInvalidatedError(error)) {
+            console.error('Shadow Shield: Unable to record protected file:', error);
+          }
+        }
+      });
+    } catch (error) {
+      if (!this.isContextInvalidatedError(error)) {
+        console.error('Shadow Shield: Unable to record protected file:', error);
+      }
+    }
   }
 };
 
