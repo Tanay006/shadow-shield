@@ -1,0 +1,25 @@
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--card-border, var(--border));
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: var(--card-bg, transparent);
+  color: var(--dark, var(--text));
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.theme-toggle:hover {
+  background: var(--light, var(--border));
+  border-color: var(--primary);
+}
+
+.theme-icon {
+  font-size: 14px;
+  line-height: 1;
+}

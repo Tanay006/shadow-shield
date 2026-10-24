@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification Center - Shadow Shield</title>
+    <link rel="stylesheet" href="notifications.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-area">
+                <img src="../assets/icons/icon128.png" alt="Shadow Shield">
+                <h1>Notification Center</h1>
+            </div>
+            <button id="clear-history" class="secondary-btn">🗑️ Clear History</button>
+            <button class="theme-toggle" data-theme-toggle type="button">
+                <span class="theme-icon" aria-hidden="true">☀️</span>
+                <span class="theme-label">Light</span>
+            </button>
+        </header>
+
+        <main>
+            <div id="empty-state" class="empty-state">
+                <div class="empty-icon">🔔</div>
+                <h2>No notifications yet</h2>
+                <p>Your alert history will appear here as you use Shadow Shield.</p>
+            </div>
+
+            <div id="notification-list" class="notification-list">
+                <!-- Notifications will be injected here -->
+            </div>
+        </main>
+    </div>
+    <script src="../utils/theme.js"></script>
+    <script src="notifications.js"></script>
+</body>
+
+</html>

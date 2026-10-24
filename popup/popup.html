@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shadow Shield</title>
+  <link rel="stylesheet" href="popup.css">
+  <link rel="stylesheet" href="../styles/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <img src="../assets/icons/icon128.png" alt="Shadow Shield" class="logo-img">
+        <h1>Shadow Shield</h1>
+      </div>
+      <button id="settings-btn" class="icon-btn">⚙️</button>
+      <button class="theme-toggle" data-theme-toggle type="button">
+        <span class="theme-icon" aria-hidden="true">☀️</span>
+        <span class="theme-label">Light</span>
+      </button>
+    </header>
+
+    <div class="platform-status" id="platform-status">
+      <span id="platform-icon">🔍</span>
+      <span id="platform-name">Detecting Platform...</span>
+    </div>
+
+    <div class="main-control">
+      <div class="toggle-container">
+        <label class="switch">
+          <input type="checkbox" id="secure-mode-toggle">
+          <span class="slider round">
+            <span class="slider-content">
+              <span class="off-label">OFF</span>
+              <span class="on-label">ON</span>
+              <span class="toggle-icon">🔓</span>
+            </span>
+          </span>
+        </label>
+      </div>
+      <p class="status-text" id="status-text">Secure Mode is OFF</p>
+      <div class="timer-display" id="timer-display" style="display:none;">
+        <span class="timer-icon" id="timer-icon">⏱️</span>
+        <span class="timer-countdown" id="timer-countdown">--:--</span>
+        <span class="timer-label" id="timer-label">until auto-off</span>
+      </div>
+    </div>
+
+    <div class="stats-card">
+      <div class="stat-item">
+        <span class="stat-value" id="protected-count">0</span>
+        <span class="stat-label">Files Protected</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="risk-level">SAFE</span>
+        <span class="stat-label">Session Risk</span>
+      </div>
+    </div>
+
+    <div class="files-list-container">
+      <h3>Protected Files</h3>
+      <ul id="files-list" class="files-list">
+        <li class="empty-state">No files protected in this session.</li>
+      </ul>
+    </div>
+
+    <footer>
+      <button id="notifications-btn" class="secondary-btn" style="margin-bottom: 8px;">🔔 Notification Center</button>
+      <button id="report-btn" class="secondary-btn">📊 View Protection Report</button>
+    </footer>
+  </div>
+  <script src="../utils/helpers.js"></script>
+  <script src="../utils/theme.js"></script>
+  <script src="popup.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,246 @@
+:root {
+  --bg: #f3f4f6;
+  --card-bg: #ffffff;
+  --text: #1f2937;
+  --text-muted: #6b7280;
+  --accent: #1a73e8;
+  --border: #e5e7eb;
+  --input-bg: #ffffff;
+  --input-border: #d1d5db;
+  --danger-bg: #fee2e2;
+  --danger-text: #991b1b;
+  --danger-border: #fecaca;
+  --danger-hover: #fecaca;
+  --success: #0d9d58;
+  --shadow: rgba(0, 0, 0, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0F172A;
+    --card-bg: #1E293B;
+    --text: #E2E8F0;
+    --text-muted: #94A3B8;
+    --accent: #818CF8;
+    --border: #334155;
+    --input-bg: #334155;
+    --input-border: #475569;
+    --danger-bg: rgba(239, 68, 68, 0.15);
+    --danger-text: #F87171;
+    --danger-border: rgba(239, 68, 68, 0.3);
+    --danger-hover: rgba(239, 68, 68, 0.25);
+    --success: #34D399;
+    --shadow: rgba(0, 0, 0, 0.3);
+  }
+}
+
+:root[data-theme="light"] {
+  --bg: #f3f4f6;
+  --card-bg: #ffffff;
+  --text: #1f2937;
+  --text-muted: #6b7280;
+  --accent: #1a73e8;
+  --border: #e5e7eb;
+  --input-bg: #ffffff;
+  --input-border: #d1d5db;
+  --danger-bg: #fee2e2;
+  --danger-text: #991b1b;
+  --danger-border: #fecaca;
+  --danger-hover: #fecaca;
+  --success: #0d9d58;
+  --shadow: rgba(0, 0, 0, 0.05);
+}
+
+:root[data-theme="dark"] {
+  --bg: #0F172A;
+  --card-bg: #1E293B;
+  --text: #E2E8F0;
+  --text-muted: #94A3B8;
+  --accent: #818CF8;
+  --border: #334155;
+  --input-bg: #334155;
+  --input-border: #475569;
+  --danger-bg: rgba(239, 68, 68, 0.15);
+  --danger-text: #F87171;
+  --danger-border: rgba(239, 68, 68, 0.3);
+  --danger-hover: rgba(239, 68, 68, 0.25);
+  --success: #34D399;
+  --shadow: rgba(0, 0, 0, 0.3);
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  padding: 40px;
+  margin: 0;
+}
+
+.options-container {
+  max-width: 600px;
+  margin: 0 auto;
+  background: var(--card-bg);
+  padding: 32px;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px var(--shadow);
+}
+
+header h1 {
+  margin-top: 0;
+  color: var(--accent);
+}
+
+.settings-group {
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 24px;
+}
+
+.settings-group:last-child {
+  border-bottom: none;
+}
+
+h2 {
+  font-size: 16px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.setting-label {
+  display: flex;
+  flex-direction: column;
+}
+
+.setting-label span {
+  font-weight: 600;
+}
+
+.setting-label small {
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--input-border);
+  transition: .4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked+.slider {
+  background-color: var(--accent);
+}
+
+input:checked+.slider:before {
+  transform: translateX(26px);
+}
+
+select {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--input-border);
+  font-family: inherit;
+  background-color: var(--input-bg);
+  color: var(--text);
+}
+
+.timer-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.custom-timer-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-timer-wrapper input[type="number"] {
+  width: 80px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--input-border);
+  font-family: inherit;
+  font-size: 14px;
+  background-color: var(--input-bg);
+  color: var(--text);
+}
+
+.custom-timer-wrapper small {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.danger-btn {
+  background-color: var(--danger-bg);
+  color: var(--danger-text);
+  border: 1px solid var(--danger-border);
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.danger-btn:hover {
+  background-color: var(--danger-hover);
+}
+
+.save-status {
+  text-align: center;
+  color: var(--success);
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.save-status.show {
+  opacity: 1;
+}
